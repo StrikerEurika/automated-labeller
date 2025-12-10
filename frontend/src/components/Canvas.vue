@@ -105,11 +105,16 @@ const drawMasks = () => {
   )
     return;
 
-  const img = container.querySelector("img");
+  const img = container.querySelector("img") as HTMLImageElement;
   if (!img) return;
 
-  canvas.width = img.naturalWidth;
-  canvas.height = img.naturalHeight;
+  // Set canvas size to match the displayed image size, not natural size
+  canvas.width = img.clientWidth;
+  canvas.height = img.clientHeight;
+
+  // Also set the style dimensions to match
+  canvas.style.width = img.clientWidth + "px";
+  canvas.style.height = img.clientHeight + "px";
 
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -139,10 +144,18 @@ const drawMasks = () => {
 
 const redrawMasks = () => {
   const canvas = maskCanvasRef.value;
+  const container = containerRef.value;
   const ctx = canvas?.getContext("2d");
-  if (!ctx || !canvas || !props.detections) return;
+  if (!ctx || !canvas || !props.detections || !container) return;
+
+  const img = container.querySelector("img") as HTMLImageElement;
+  if (!img) return;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Calculate scale factors between displayed size and natural size
+  const scaleX = canvas.width / img.naturalWidth;
+  const scaleY = canvas.height / img.naturalHeight;
 
   // Draw all masks
   props.detections.forEach((detection) => {
@@ -168,7 +181,7 @@ const redrawMasks = () => {
       ctx.globalAlpha = 0.6;
     }
 
-    // Draw mask
+    // Draw mask scaled to displayed size
     ctx.drawImage(imgEl, 0, 0, canvas.width, canvas.height);
 
     // Apply color overlay
@@ -188,9 +201,14 @@ const redrawMasks = () => {
       ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
       ctx.shadowBlur = 10;
 
-      // Draw bounding box
+      // Draw bounding box scaled to displayed size
       const [x1, y1, x2, y2] = detection.bbox;
-      ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+      ctx.strokeRect(
+        x1 * scaleX,
+        y1 * scaleY,
+        (x2 - x1) * scaleX,
+        (y2 - y1) * scaleY
+      );
 
       ctx.shadowBlur = 0;
     }
@@ -219,14 +237,21 @@ const getDetectionAtPoint = (e: MouseEvent): Detection | null => {
   const container = containerRef.value;
   if (!canvas || !container || !props.detections) return null;
 
-  const img = container.querySelector("img");
+  const img = container.querySelector("img") as HTMLImageElement;
   if (!img) return null;
 
   const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-  const x = ((e.clientX - rect.left) * scaleX) / (props.zoom || 1);
-  const y = ((e.clientY - rect.top) * scaleY) / (props.zoom || 1);
+  // Calculate position relative to canvas
+  const x = (e.clientX - rect.left) / (props.zoom || 1);
+  const y = (e.clientY - rect.top) / (props.zoom || 1);
+
+  // Calculate scale factors to convert from displayed coordinates to natural coordinates
+  const scaleX = img.naturalWidth / canvas.width;
+  const scaleY = img.naturalHeight / canvas.height;
+
+  // Convert to natural image coordinates for bbox comparison
+  const naturalX = x * scaleX;
+  const naturalY = y * scaleY;
 
   // Check detections in reverse order (top to bottom)
   for (let i = props.detections.length - 1; i >= 0; i--) {
@@ -234,7 +259,7 @@ const getDetectionAtPoint = (e: MouseEvent): Detection | null => {
     if (detection.visible === false) continue;
 
     const [x1, y1, x2, y2] = detection.bbox;
-    if (x >= x1 && x <= x2 && y >= y1 && y <= y2) {
+    if (naturalX >= x1 && naturalX <= x2 && naturalY >= y1 && naturalY <= y2) {
       return detection;
     }
   }
