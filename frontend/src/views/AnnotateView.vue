@@ -305,9 +305,98 @@
         <div class="overflow-auto max-h-[70vh] border rounded-lg">
           <Canvas
             :image-src="imagePreview"
-            :masks-b64="masksB64"
+            :detections="detections"
             :zoom="zoomLevel"
+            :selected-detection-id="selectedDetectionId"
+            @select-detection="selectDetection"
           />
+        </div>
+
+        <!-- Detection Legend -->
+        <div v-if="detections.length > 0" class="mt-4">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="text-sm font-semibold text-gray-700">
+              Detected Objects
+            </h3>
+            <button
+              @click="toggleAllDetections"
+              class="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+            >
+              {{ detections.every((d) => d.visible) ? "Hide All" : "Show All" }}
+            </button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            <div
+              v-for="detection in detections"
+              :key="detection.id"
+              @click="selectDetection(detection.id)"
+              :class="[
+                'p-3 rounded-lg border-2 cursor-pointer transition-all',
+                selectedDetectionId === detection.id
+                  ? 'border-indigo-500 bg-indigo-50 shadow-md'
+                  : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow',
+              ]"
+            >
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2 flex-1">
+                  <div
+                    :style="{
+                      backgroundColor: getDetectionColor(detection.id),
+                    }"
+                    class="w-4 h-4 rounded-full border-2 border-white shadow"
+                  ></div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">
+                      {{ detection.label }}
+                    </p>
+                    <p class="text-xs text-gray-500">
+                      {{ Math.round(detection.confidence * 100) }}% confidence
+                    </p>
+                  </div>
+                </div>
+                <button
+                  @click.stop="toggleDetectionVisibility(detection.id)"
+                  class="ml-2 p-1 hover:bg-gray-100 rounded transition"
+                  :title="detection.visible ? 'Hide' : 'Show'"
+                >
+                  <svg
+                    v-if="detection.visible"
+                    class="w-5 h-5 text-gray-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    />
+                  </svg>
+                  <svg
+                    v-else
+                    class="w-5 h-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -319,16 +408,27 @@ import { ref } from "vue";
 import api from "@/api/client";
 import Canvas from "@/components/Canvas.vue";
 
+interface Detection {
+  id: number;
+  label: string;
+  confidence: number;
+  bbox: number[];
+  mask_b64: string;
+  visible?: boolean;
+}
+
 const prompt = ref("car, tree");
 const selectedFile = ref<File | null>(null);
 const imagePreview = ref<string | null>(null);
 const masksB64 = ref<string[]>([]);
+const detections = ref<Detection[]>([]);
 const isLoading = ref(false);
 const errorMessage = ref("");
 const successMessage = ref("");
 const isDragging = ref(false);
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const zoomLevel = ref(1);
+const selectedDetectionId = ref<number | null>(null);
 
 const triggerFileInput = () => {
   fileInputRef.value?.click();
@@ -389,6 +489,10 @@ const runAutoAnnotate = async () => {
       headers: { "Content-Type": "multipart/form-data" },
     });
     masksB64.value = res.data.masks_b64;
+    detections.value = (res.data.detections || []).map((d: Detection) => ({
+      ...d,
+      visible: true,
+    }));
 
     if (masksB64.value.length === 0) {
       errorMessage.value =
@@ -458,9 +562,29 @@ const clearImage = () => {
   selectedFile.value = null;
   imagePreview.value = null;
   masksB64.value = [];
+  detections.value = [];
+  selectedDetectionId.value = null;
   errorMessage.value = "";
   successMessage.value = "";
   zoomLevel.value = 1;
+};
+
+const toggleDetectionVisibility = (id: number) => {
+  const detection = detections.value.find((d) => d.id === id);
+  if (detection) {
+    detection.visible = !detection.visible;
+  }
+};
+
+const selectDetection = (id: number) => {
+  selectedDetectionId.value = selectedDetectionId.value === id ? null : id;
+};
+
+const toggleAllDetections = () => {
+  const allVisible = detections.value.every((d) => d.visible);
+  detections.value.forEach((d) => {
+    d.visible = !allVisible;
+  });
 };
 
 const zoomIn = () => {
@@ -473,5 +597,19 @@ const zoomOut = () => {
 
 const resetZoom = () => {
   zoomLevel.value = 1;
+};
+
+const getDetectionColor = (id: number) => {
+  const colors = [
+    "rgba(255, 99, 71, 0.8)", // Tomato
+    "rgba(54, 162, 235, 0.8)", // Blue
+    "rgba(75, 192, 192, 0.8)", // Teal
+    "rgba(255, 206, 86, 0.8)", // Yellow
+    "rgba(153, 102, 255, 0.8)", // Purple
+    "rgba(255, 159, 64, 0.8)", // Orange
+    "rgba(46, 204, 113, 0.8)", // Green
+    "rgba(231, 76, 60, 0.8)", // Red
+  ];
+  return colors[id % colors.length];
 };
 </script>

@@ -44,16 +44,30 @@ async def annotate(
 
     # Convert masks to base64-encoded PNG for preview (simpler than RLE for frontend)
     mask_images = []
-    for mask in masks:
+    detections = []
+
+    for i, mask in enumerate(masks):
         mask_img = Image.fromarray((mask * 255).astype(np.uint8), mode="L")
         buf = io.BytesIO()
         mask_img.save(buf, format="PNG")
         mask_b64 = base64.b64encode(buf.getvalue()).decode()
         mask_images.append(mask_b64)
 
+        # Create detection metadata
+        detection = {
+            "id": i,
+            "label": labels[i] if i < len(labels) else "unknown",
+            "confidence": float(scores[i]) if i < len(scores) else 0.0,
+            "bbox": boxes[i] if i < len(boxes) else [0, 0, 0, 0],
+            "mask_b64": mask_b64
+        }
+        detections.append(detection)
+
     return {
         "boxes": boxes,
         "scores": scores,
         "labels": labels,
-        "masks_b64": mask_images  # frontend can overlay as <img src="data:image/png;base64,...">
+        # frontend can overlay as <img src="data:image/png;base64,...">
+        "masks_b64": mask_images,
+        "detections": detections  # structured detection data with metadata
     }
