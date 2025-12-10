@@ -13,8 +13,19 @@ class GroundingDINO(BaseDetector):
         self.device = device
 
     def predict(self, image: Image.Image, prompts: List[str], box_threshold=0.35, text_threshold=0.25):
-        # Prepare image
-        image_np = np.array(image.convert("RGB"))
+        # Prepare image using load_image which returns the tensor format expected by predict
+        import tempfile
+        import os
+
+        # Save image temporarily to use load_image
+        with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp:
+            image.convert("RGB").save(tmp.name)
+            tmp_path = tmp.name
+
+        try:
+            image_source, image_tensor = load_image(tmp_path)
+        finally:
+            os.unlink(tmp_path)
 
         # Join prompts with periods
         text_prompt = ". ".join(prompts) + "." if prompts else ""
@@ -22,10 +33,11 @@ class GroundingDINO(BaseDetector):
         # Predict boxes
         boxes, logits, phrases = predict(
             model=self.model,
-            image=image_np,
+            image=image_tensor,
             caption=text_prompt,
             box_threshold=box_threshold,
-            text_threshold=text_threshold
+            text_threshold=text_threshold,
+            device=self.device
         )
 
         # Convert boxes from normalized [0,1] to pixel coordinates
