@@ -1,7 +1,7 @@
 import torch
 from typing import List, Tuple
-from grounding_dino.util.inference import load_model, load_image, predict
-from grounding_dino.util import box_ops
+from groundingdino.util.inference import load_model, load_image, predict
+from groundingdino.util import box_ops
 from PIL import Image
 import numpy as np
 from app.models.vision import BaseDetector
