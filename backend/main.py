@@ -1,47 +1,15 @@
-# main.py
-from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Dict, Optional
-import asyncio
-import logging
-import warnings
+"""
+Main entry point for running the FastAPI backend server.
+Run this file directly with: python main.py
+"""
 
-# Suppress known deprecation warnings from ML dependencies
-warnings.filterwarnings(
-    "ignore", category=FutureWarning, module="transformers")
-warnings.filterwarnings("ignore", category=UserWarning, module="torch")
-warnings.filterwarnings(
-    "ignore", category=FutureWarning, module="groundingdino")
+if __name__ == "__main__":
+    import uvicorn
 
-app = FastAPI(title="AutoAnnotate API", version="1.0.0")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Configure for production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Pydantic models for request/response
-
-
-class AnnotationRequest(BaseModel):
-    image_id: str
-    prompt: str
-    confidence_threshold: float = 0.3
-    iou_threshold: float = 0.5
-
-
-class BatchAnnotationRequest(BaseModel):
-    image_ids: List[str]
-    prompt: str
-    batch_size: int = 8
-
-
-class AnnotationResult(BaseModel):
-    image_id: str
-    detections: List[Dict]
-    masks: List[Dict]
-    processing_time: float
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        log_level="info"
+    )
