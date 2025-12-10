@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+python-multipart
+Pillow
+supervision==0.15.0

@@ -1,0 +1,14 @@
+[Unit]
+Description=AutoAnnotate Service
+After=docker.service
+Requires=docker.service
+
+[Service]
+WorkingDirectory=/opt/autoannotate
+ExecStart=/usr/bin/docker-compose -f /opt/autoannotate/docker-compose.yml up
+ExecStop=/usr/bin/docker-compose -f /opt/autoannotate/docker-compose.yml down
+Restart=always
+User=your-user
+
+[Install]
+WantedBy=multi-user.target
