@@ -5,6 +5,14 @@ from PIL import Image
 import io
 import base64
 import numpy as np
+import warnings
+
+# Suppress known deprecation warnings from dependencies
+warnings.filterwarnings(
+    "ignore", category=FutureWarning, module="transformers")
+warnings.filterwarnings("ignore", category=UserWarning, module="torch")
+warnings.filterwarnings(
+    "ignore", category=FutureWarning, module="groundingdino")
 
 router = APIRouter()
 

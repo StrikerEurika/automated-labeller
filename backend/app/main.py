@@ -1,6 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import annotate
+import warnings
+
+# Suppress known deprecation warnings from ML dependencies
+warnings.filterwarnings(
+    "ignore", category=FutureWarning, module="transformers")
+warnings.filterwarnings("ignore", category=UserWarning, module="torch")
+warnings.filterwarnings(
+    "ignore", category=FutureWarning, module="groundingdino")
 
 app = FastAPI(title="AutoAnnotate API")
 
