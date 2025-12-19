@@ -4,12 +4,12 @@ An intelligent image annotation tool powered by AI that combines **Grounding DIN
 
 ## Features
 
-- **Text-Prompted Detection**: Use natural language prompts (e.g., "car", "tree", "person") to detect objects
-- **High-Quality Segmentation**: Automatic mask generation using Meta's Segment Anything Model
-- **Interactive Canvas**: Real-time visualization of bounding boxes and segmentation masks
-- **RESTful API**: FastAPI backend with comprehensive API documentation
-- **Modern UI**: Vue 3 + Tailwind CSS responsive interface
-- **GPU Acceleration**: CUDA support for fast inference (CPU fallback available)
+- [x] **Text-Prompted Detection**: Use natural language prompts (e.g., "car", "tree", "person") to detect objects
+- [x] **High-Quality Segmentation**: Automatic mask generation using Meta's Segment Anything Model
+- [x] **Interactive Canvas**: Real-time visualization of bounding boxes and segmentation masks
+- [x] **RESTful API**: FastAPI backend with comprehensive API documentation
+- [x] **Modern UI**: Vue 3 + Tailwind CSS responsive interface
+- [x] **GPU Acceleration**: CUDA support for fast inference (CPU fallback available)
 
 ## Architecture
 
